@@ -47,7 +47,16 @@ $("signupBtn").onclick=async()=>{
 };
 $("logoutBtn").onclick=async()=>{await db.auth.signOut();user=profile=activeShift=null;clearInterval(timerInt);showAuth()};
 $("clockInBtn").onclick=async()=>{const {data,error}=await db.from("shifts").insert({trooper_id:user.id}).select().single();if(error)return toast(error.message);activeShift=data;await setStatus("10-8");renderShift();toast("Clocked in.")};
-$("clockOutBtn").onclick=async()=>{if(!activeShift)return;const {error}=await db.from("shifts").update({clock_out:new Date().toISOString()}).eq("id",activeShift.id);if(error)return toast(error.message);activeShift=null;await setStatus("10-7");renderShift();toast("Clocked out.")};
+$("clockOutBtn").onclick=async()=>{
+ if(!activeShift)return;
+ const {error}=await db.rpc("clock_out");
+ if(error)return toast(error.message);
+ activeShift=null;
+ profile.duty_status="10-7";
+ $("statusLamp").textContent="10-7";
+ renderShift();
+ toast("Clocked out securely.");
+};
 async function setStatus(s){
  if(!activeShift && s!=="10-7") return toast("Clock in before changing duty status.");
  const {error}=await db.rpc("set_my_duty_status",{p_status:s});
@@ -71,6 +80,15 @@ $("submitForm").onclick=async()=>{
  if(error)return toast(error.message);$("formCard").classList.add("hidden");toast(formMode.mode==="report"?"Report submitted for Command review.":"Request submitted.");
 };
 $("commandBtn").onclick=async()=>{$("commandCard").classList.remove("hidden");await loadPending();$("commandCard").scrollIntoView({behavior:"smooth"})};
+document.querySelectorAll("[data-cmdtab]").forEach(b=>b.onclick=async()=>{
+ document.querySelectorAll(".cmdtab").forEach(x=>x.classList.remove("active")); b.classList.add("active");
+ document.querySelectorAll(".cmdpane").forEach(x=>x.classList.add("hidden"));
+ const t=b.dataset.cmdtab; $("cmd"+t[0].toUpperCase()+t.slice(1)).classList.remove("hidden");
+ if(t==="personnel") await loadPersonnel();
+ if(t==="shifts") await loadCommandShifts();
+ if(t==="requests") await loadRequests();
+ if(t==="audit") await loadAudit();
+});
 $("closeCommand").onclick=()=> $("commandCard").classList.add("hidden");
 async function loadPending(){
  const {data,error}=await db.from("reports").select("id,report_type,location,subject,narrative,created_at").eq("review_status","pending").order("created_at");
@@ -85,4 +103,49 @@ async function review(id,a){
  if(error)return toast(error.message);toast(a==="approve"?`Approved — ${data}`:`Report ${a}ed.`);await loadPending()
 }
 function escapeHtml(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+
+async function loadPersonnel(){
+ const {data,error}=await db.from("personnel").select("*").order("rank");
+ if(error){$("personnelList").textContent=error.message;return}
+ $("personnelList").innerHTML="";
+ data.forEach(p=>{
+  const d=document.createElement("div"); d.className="person-card";
+  d.innerHTML=`<div class="person-top"><div><h3>${escapeHtml(p.display_name)}</h3><span class="tag">${escapeHtml(p.callsign||"NO CALLSIGN")}</span><span class="tag">${escapeHtml(p.rank)}</span></div><span class="mini">${escapeHtml(p.account_status)}</span></div>
+  <div class="person-grid"><input data-f="callsign" value="${escapeHtml(p.callsign||"")}" placeholder="Callsign"><button data-save="callsign">Save Callsign</button><input data-f="rank" value="${escapeHtml(p.rank||"")}" placeholder="Rank"><input data-f="division" value="${escapeHtml(p.division||"")}" placeholder="Division"><button data-save="rank" class="gold">Save Rank / Division</button></div>`;
+  d.querySelector('[data-save="callsign"]').onclick=async()=>{const v=d.querySelector('[data-f="callsign"]').value;const {error}=await db.rpc("set_callsign",{p_user_id:p.id,p_callsign:v});if(error)return toast(error.message);toast("Callsign updated.");await loadPersonnel()};
+  d.querySelector('[data-save="rank"]').onclick=async()=>{const r=d.querySelector('[data-f="rank"]').value,v=d.querySelector('[data-f="division"]').value;const {error}=await db.rpc("set_rank_division",{p_user_id:p.id,p_rank:r,p_division:v});if(error)return toast(error.message);toast("Rank/division updated.");await loadPersonnel()};
+  $("personnelList").appendChild(d)
+ })
+}
+async function loadCommandShifts(){
+ const {data,error}=await db.from("shifts").select("id,trooper_id,clock_in,clock_out,corrected").order("clock_in",{ascending:false}).limit(50);
+ if(error){$("shiftList").textContent=error.message;return}
+ $("shiftList").innerHTML=data.length?"":"No shifts recorded.";
+ data.forEach(s=>{const d=document.createElement("div");d.className="history-card";const who=s.trooper_id===user.id?profile.display_name:s.trooper_id.slice(0,8);d.innerHTML=`<strong>${escapeHtml(who)}</strong><br><small>IN: ${new Date(s.clock_in).toLocaleString()}<br>OUT: ${s.clock_out?new Date(s.clock_out).toLocaleString():"ACTIVE"}${s.corrected?" • CORRECTED":""}</small>`;$("shiftList").appendChild(d)})
+}
+async function loadRequests(){
+ const {data,error}=await db.from("requests").select("*").order("created_at",{ascending:false}).limit(50);
+ if(error){$("requestList").textContent=error.message;return}
+ $("requestList").innerHTML=data.length?"":"No requests.";
+ data.forEach(r=>{
+ const d=document.createElement("div"); d.className="history-card";
+ d.innerHTML=`<strong>${escapeHtml(r.request_type)}</strong> <span class="tag">${escapeHtml(r.status)}</span><p>${escapeHtml(r.details)}</p><small>${new Date(r.created_at).toLocaleString()}</small>`;
+ if(r.status==="pending"){
+  const actions=document.createElement("div"); actions.className="cmd-actions";
+  const approve=document.createElement("button"); approve.textContent="Approve";
+  const reject=document.createElement("button"); reject.textContent="Reject";
+  approve.onclick=async()=>{const {error}=await db.rpc("approve_request",{p_request_id:r.id});if(error)return toast(error.message);toast("Request approved.");await loadRequests()};
+  reject.onclick=async()=>{const notes=prompt("Command notes (required):");if(!notes)return;const {error}=await db.rpc("reject_request",{p_request_id:r.id,p_notes:notes});if(error)return toast(error.message);toast("Request rejected.");await loadRequests()};
+  actions.append(approve,reject); d.appendChild(actions);
+ }
+ $("requestList").appendChild(d)
+})
+}
+async function loadAudit(){
+ const {data,error}=await db.from("audit_log").select("*").order("created_at",{ascending:false}).limit(50);
+ if(error){$("auditList").textContent=error.message;return}
+ $("auditList").innerHTML=data.length?"":"No audit entries.";
+ data.forEach(a=>{const d=document.createElement("div");d.className="history-card";d.innerHTML=`<strong>${escapeHtml(a.action)}</strong><br><small>${escapeHtml(a.target_type||"system")} • ${new Date(a.created_at).toLocaleString()}</small>`;$("auditList").appendChild(d)})
+}
+
 loadSession();

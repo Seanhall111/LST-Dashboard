@@ -87,9 +87,19 @@
     </div>
 
     <div id="commandCard" class="card hidden">
-      <div class="section-title"><span>Command Center</span><button id="closeCommand" class="x">×</button></div>
-      <p class="muted">Pending reports</p>
-      <div id="pendingReports">Loading…</div>
+      <div class="section-title"><span>🛡️ Command Center</span><button id="closeCommand" class="x">×</button></div>
+      <div class="command-tabs">
+        <button data-cmdtab="reports" class="cmdtab active">Reports</button>
+        <button data-cmdtab="personnel" class="cmdtab">Personnel</button>
+        <button data-cmdtab="shifts" class="cmdtab">Shifts</button>
+        <button data-cmdtab="requests" class="cmdtab">Requests</button>
+        <button data-cmdtab="audit" class="cmdtab">Audit</button>
+      </div>
+      <div id="cmdReports" class="cmdpane"><p class="muted">Pending reports</p><div id="pendingReports">Loading…</div></div>
+      <div id="cmdPersonnel" class="cmdpane hidden"><div id="personnelList">Loading…</div></div>
+      <div id="cmdShifts" class="cmdpane hidden"><div id="shiftList">Loading…</div></div>
+      <div id="cmdRequests" class="cmdpane hidden"><div id="requestList">Loading…</div></div>
+      <div id="cmdAudit" class="cmdpane hidden"><div id="auditList">Loading…</div></div>
     </div>
   </section>
 </main>

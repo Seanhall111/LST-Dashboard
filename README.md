@@ -1,25 +1,19 @@
-# LST Dashboard v0.3
+# LST Dashboard v0.4 — Command Center Update
 
-Mobile-first Liberty State Troopers dashboard connected to the separate LST Supabase project.
+Adds a mobile Command Center with:
+- Pending report review
+- Personnel directory
+- Callsign editing via secure RPC
+- Rank/division editing via secure RPC
+- Recent shift history
+- Request queue
+- Audit log
 
-Included now:
-- Supabase email/password sign-in
-- Trooper account registration with display name
-- Personnel profile
-- Clock in/out
-- Arrest Report, Citation, Scene Log submission
-- Training and Leave requests
-- Command-only pending report view
-- Secure Approve / Return / Reject RPC calls
-- Automatic case number returned on approval
-- Dark navy / blue / gold visual direction
+Existing v0.3 patrol, clock, authentication, report and case-number workflows remain intact.
 
-Important:
-- The Supabase publishable key is intentionally client-side. Never add a secret/service-role key to this site.
-- Duty status buttons now call the secured set_my_duty_status RPC and persist to Supabase.
-- Do not deploy this to the Money Clicker Netlify project.
+Before publishing v0.4, grant Command read access to audit_log and ensure the existing Command RLS policies and RPCs are installed. Never put a secret/service-role key in this frontend.
 
-Files:
-- index.html
-- styles.css
-- app.js
+- v0.4.1 adds Command Approve / Reject controls for pending Training and Leave requests.
+
+- v0.4.2 moves Clock Out to the secured `clock_out()` Supabase RPC.
+- The frontend no longer directly updates shift rows when clocking out.
