@@ -9,3 +9,6 @@
 .person-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}
 .person-grid input{margin:0;padding:9px}.person-grid button{padding:9px;font-size:11px}
 .tag{display:inline-block;padding:4px 7px;border-radius:999px;border:1px solid #315270;font-size:9px;margin:2px}
+
+.person-grid select{width:100%;border:1px solid #28425e;background:#050c16;color:white;border-radius:11px;padding:9px;font:inherit}
+.person-card .danger{border-color:#7d3038}

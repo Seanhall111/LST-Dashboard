@@ -17,3 +17,7 @@ Before publishing v0.4, grant Command read access to audit_log and ensure the ex
 
 - v0.4.2 moves Clock Out to the secured `clock_out()` Supabase RPC.
 - The frontend no longer directly updates shift rows when clocking out.
+
+- v0.4.3 adds Command personnel controls for permission level and account status.
+- Uses secured `set_permission` and `set_account_status` RPCs.
+- Adds warnings before changing the signed-in administrator's own access.
