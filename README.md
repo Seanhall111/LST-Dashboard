@@ -21,3 +21,6 @@ Before publishing v0.4, grant Command read access to audit_log and ensure the ex
 - v0.4.3 adds Command personnel controls for permission level and account status.
 - Uses secured `set_permission` and `set_account_status` RPCs.
 - Adds warnings before changing the signed-in administrator's own access.
+
+- v0.4.4 fixes Personnel permission/account-status controls not rendering.
+- Personnel controls are now constructed without nested template literals for better mobile/browser compatibility.

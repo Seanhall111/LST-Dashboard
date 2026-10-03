@@ -110,38 +110,44 @@ async function loadPersonnel(){
  $("personnelList").innerHTML="";
  data.forEach(p=>{
   const d=document.createElement("div"); d.className="person-card";
-  d.innerHTML=`<div class="person-top"><div><h3>${escapeHtml(p.display_name)}</h3><span class="tag">${escapeHtml(p.callsign||"NO CALLSIGN")}</span><span class="tag">${escapeHtml(p.rank)}</span></div><span class="mini">${escapeHtml(p.account_status)}</span></div>
-  <div class="person-grid">
-  <input data-f="callsign" value="${escapeHtml(p.callsign||"")}" placeholder="Callsign">
-  <button data-save="callsign">Save Callsign</button>
-  <input data-f="rank" value="${escapeHtml(p.rank||"")}" placeholder="Rank">
-  <input data-f="division" value="${escapeHtml(p.division||"")}" placeholder="Division">
-  <button data-save="rank" class="gold">Save Rank / Division</button>
-  <select data-f="permission">
-    ${["trooper","supervisor","command","administrator"].map(x=>`<option value="${x}" ${p.permission_level===x?"selected":""}>${x.toUpperCase()}</option>`).join("")}
-  </select>
-  <button data-save="permission">Save Permission</button>
-  <select data-f="status">
-    ${["active","inactive","suspended"].map(x=>`<option value="${x}" ${p.account_status===x?"selected":""}>${x.toUpperCase()}</option>`).join("")}
-  </select>
-  <button data-save="status" class="danger">Save Account Status</button>
-</div>`;
-  d.querySelector('[data-save="callsign"]').onclick=async()=>{const v=d.querySelector('[data-f="callsign"]').value;const {error}=await db.rpc("set_callsign",{p_user_id:p.id,p_callsign:v});if(error)return toast(error.message);toast("Callsign updated.");await loadPersonnel()};
-  d.querySelector('[data-save="rank"]').onclick=async()=>{const r=d.querySelector('[data-f="rank"]').value,v=d.querySelector('[data-f="division"]').value;const {error}=await db.rpc("set_rank_division",{p_user_id:p.id,p_rank:r,p_division:v});if(error)return toast(error.message);toast("Rank/division updated.");await loadPersonnel()};
+  d.innerHTML='<div class="person-top"><div><h3>'+escapeHtml(p.display_name)+'</h3><span class="tag">'+escapeHtml(p.callsign||"NO CALLSIGN")+'</span><span class="tag">'+escapeHtml(p.rank)+'</span></div><span class="mini">'+escapeHtml(p.account_status)+'</span></div><div class="person-grid"><input data-f="callsign" placeholder="Callsign"><button data-save="callsign">Save Callsign</button><input data-f="rank" placeholder="Rank"><input data-f="division" placeholder="Division"><button data-save="rank" class="gold">Save Rank / Division</button><select data-f="permission"></select><button data-save="permission">Save Permission</button><select data-f="status"></select><button data-save="status" class="danger">Save Account Status</button></div>';
+  d.querySelector('[data-f="callsign"]').value=p.callsign||"";
+  d.querySelector('[data-f="rank"]').value=p.rank||"";
+  d.querySelector('[data-f="division"]').value=p.division||"";
+
+  const permission=d.querySelector('[data-f="permission"]');
+  ["trooper","supervisor","command","administrator"].forEach(v=>{
+   const o=document.createElement("option");o.value=v;o.textContent=v.toUpperCase();o.selected=p.permission_level===v;permission.appendChild(o);
+  });
+  const status=d.querySelector('[data-f="status"]');
+  ["active","inactive","suspended"].forEach(v=>{
+   const o=document.createElement("option");o.value=v;o.textContent=v.toUpperCase();o.selected=p.account_status===v;status.appendChild(o);
+  });
+
+  d.querySelector('[data-save="callsign"]').onclick=async()=>{
+   const v=d.querySelector('[data-f="callsign"]').value;
+   const {error}=await db.rpc("set_callsign",{p_user_id:p.id,p_callsign:v});
+   if(error)return toast(error.message);toast("Callsign updated.");await loadPersonnel();
+  };
+  d.querySelector('[data-save="rank"]').onclick=async()=>{
+   const r=d.querySelector('[data-f="rank"]').value,v=d.querySelector('[data-f="division"]').value;
+   const {error}=await db.rpc("set_rank_division",{p_user_id:p.id,p_rank:r,p_division:v});
+   if(error)return toast(error.message);toast("Rank/division updated.");await loadPersonnel();
+  };
   d.querySelector('[data-save="permission"]').onclick=async()=>{
-   const v=d.querySelector('[data-f="permission"]').value;
-   if(p.id===user.id && v!=="administrator" && !confirm("This changes your own administrator permission. Continue?")) return;
+   const v=permission.value;
+   if(p.id===user.id && v!=="administrator" && !confirm("This changes your own administrator permission. Continue?"))return;
    const {error}=await db.rpc("set_permission",{p_user_id:p.id,p_permission:v});
-   if(error)return toast(error.message); toast("Permission updated."); await loadPersonnel();
+   if(error)return toast(error.message);toast("Permission updated.");await loadPersonnel();
   };
   d.querySelector('[data-save="status"]').onclick=async()=>{
-   const v=d.querySelector('[data-f="status"]').value;
-   if(p.id===user.id && v!=="active" && !confirm("This changes your own account status and may remove Command access. Continue?")) return;
+   const v=status.value;
+   if(p.id===user.id && v!=="active" && !confirm("This changes your own account status and may remove Command access. Continue?"))return;
    const {error}=await db.rpc("set_account_status",{p_user_id:p.id,p_status:v});
-   if(error)return toast(error.message); toast("Account status updated."); await loadPersonnel();
+   if(error)return toast(error.message);toast("Account status updated.");await loadPersonnel();
   };
-  $("personnelList").appendChild(d)
- })
+  $("personnelList").appendChild(d);
+ });
 }
 async function loadCommandShifts(){
  const {data,error}=await db.from("shifts").select("id,trooper_id,clock_in,clock_out,corrected").order("clock_in",{ascending:false}).limit(50);
